@@ -1,0 +1,19 @@
+export const positionMetrics={
+GK:['Shot stopping','Handling','Distribution','Aerial command','Sweeper actions','Communication'],
+CB:['1v1 defending','Aerial duels','Positioning','Progressive passing','Recovery speed','Decision making'],
+RB:['1v1 defending','Recovery runs','Crossing','Overlap timing','Ball progression','Transition awareness'],
+LB:['1v1 defending','Recovery runs','Crossing','Overlap timing','Ball progression','Transition awareness'],
+DM:['Scanning','Defensive positioning','Press resistance','Progressive passing','Duels','Cover shadow'],
+CM:['Scanning','Passing range','Press resistance','Ball progression','Defensive work','Tempo control'],
+AM:['Creativity','Final pass','Between-lines movement','First touch','Pressing','Finishing'],
+RW:['1v1 attacking','Acceleration','Crossing','Off-ball movement','Finishing','Defensive tracking'],
+LW:['1v1 attacking','Acceleration','Crossing','Off-ball movement','Finishing','Defensive tracking'],
+ST:['Finishing','Box movement','Link-up play','Pressing','Aerial threat','Runs in behind']
+};
+export function renderPositionMetrics(target,position){target.innerHTML='<h3>Position-specific evidence · '+position+'</h3><p class="muted">Rate each observed competency from 1 (poor) to 5 (excellent).</p>'+ (positionMetrics[position]||positionMetrics.CM).map((m,i)=>'<label>'+m+' <select data-pos-metric="'+i+'">'+[1,2,3,4,5].map(n=>'<option value="'+n+'" '+(n===3?'selected':'')+'>'+n+'</option>').join('')+'</select></label>').join('')}
+export function readPositionMetrics(target,position){const labels=positionMetrics[position]||positionMetrics.CM;return Object.fromEntries([...target.querySelectorAll('[data-pos-metric]')].map(el=>[labels[Number(el.dataset.posMetric)],Number(el.value)]))}
+export function buildRecruitmentIntelligence(target,players,reports,meetings){
+ const escape=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ const rows=players.map(p=>{const rs=reports.filter(r=>r.player_id===p.id);const ds=meetings.filter(m=>m.player_id===p.id);const mean=key=>{const nums=rs.map(r=>Number(r[key])).filter(n=>Number.isFinite(n)&&n>0);return nums.length?nums.reduce((a,b)=>a+b,0)/nums.length:null};const ability=rs.map(r=>Object.values(r.ratings||{}).filter(v=>typeof v==='number'&&v>=1&&v<=5)).filter(v=>v.length).map(v=>v.reduce((a,b)=>a+b,0)/v.length);const avg=ability.length?ability.reduce((a,b)=>a+b,0)/ability.length:null;const recruit=rs.filter(r=>r.recommendation==='recruit').length;const reject=rs.filter(r=>r.recommendation==='reject').length;return {p,rs,ds,avg,potential:mean('potential'),fit:mean('tactical_fit'),recruit,reject,score:avg===null?null:Math.round(100*(.5*avg/5+.25*(mean('potential')||0)/100+.25*(mean('tactical_fit')||0)/100))}}).sort((a,b)=>(b.score??-1)-(a.score??-1));
+ target.innerHTML='<h2>Recruitment intelligence board</h2><p class="muted">Transparent weighted scout score: observed ability 50%, potential 25%, tactical fit 25%. This is a decision-support heuristic, not a validated Moneyball model or predicted transfer success.</p><div style="overflow-x:auto"><table><tr><th>Player</th><th>Position</th><th>Reports</th><th>Ability /5</th><th>Potential</th><th>Fit</th><th>Composite /100</th><th>Scout split</th><th>Latest decision</th></tr>'+rows.map(x=>'<tr><td>'+escape(x.p.name)+'</td><td>'+escape(x.p.position)+'</td><td>'+x.rs.length+'</td><td>'+(x.avg?.toFixed(1)??'—')+'</td><td>'+(x.potential?.toFixed(0)??'—')+'</td><td>'+(x.fit?.toFixed(0)??'—')+'</td><td><b>'+(x.score??'—')+'</b></td><td>'+x.recruit+' recruit / '+x.reject+' reject'+(x.recruit&&x.reject?' ⚠ disagreement':'')+'</td><td>'+escape(x.ds[0]?.decision||'Pending')+'</td></tr>').join('')+'</table></div><p class="muted">Scores are omitted until reports exist. Decisions are independent of ranking. Review observation quality, scouting sample size, and financial data separately.</p>';
+}
